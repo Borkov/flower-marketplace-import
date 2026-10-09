@@ -1,0 +1,33 @@
+<main class="page">
+  <header class="header">
+    <h1>Заказы</h1>
+    <p class="subtitle">Демо-магазин #{{ 1 }}</p>
+  </header>
+
+  <section class="actions">
+    <button
+      type="button"
+      class="btn-primary"
+      [disabled]="loading()"
+      (click)="loadFixtureAndImport()"
+    >
+      {{ loading() ? 'Загрузка…' : 'Загрузить заказы' }}
+    </button>
+  </section>
+
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+
+  @if (importResult()) {
+    <section class="card">
+      <h2>Результат импорта</h2>
+      <pre>{{ importResult() | json }}</pre>
+    </section>
+  }
+
+  <section class="card placeholder">
+    <h2>Список заказов</h2>
+    <p>Фильтр по статусу и карточки заказов — следующий этап.</p>
+  </section>
+</main>
