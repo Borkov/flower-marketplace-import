@@ -46,7 +46,20 @@ docker compose exec php vendor/bin/phpunit
 
 - [x] Docker Compose (mysql, php-fpm, nginx, frontend)
 - [x] Импорт фикстуры, расчёт доставки, список заказов и фильтр по статусу
+- [x] Идемпотентность: UNIQUE `(shop_id, marketplace_id)` + `SELECT ... FOR UPDATE` по магазину
+- [x] Один плохой заказ не роняет пачку: per-order savepoint + валидация длин в парсере
 - [x] Unit-тесты правил фикстуры (телефон, статусы, доставка, дубль в пачке)
+
+## API
+
+| Метод | Путь | Назначение |
+|-------|------|------------|
+| GET | `/api/health` | проверка живости |
+| POST | `/api/shops/{shopId}/orders/import` | импорт пачки, ответ — `results[]` + `summary` |
+| GET | `/api/shops/{shopId}/orders?status=&page=&limit=` | список с фильтром по статусу |
+
+`outcome` в ответе импорта: `created`, `updated`, `unchanged`, `duplicate`, `rejected`.
+Неизвестный `status` в фильтре → `400 unknown_status_filter`.
 
 ## Разработка без Docker (опционально)
 
@@ -58,4 +71,4 @@ composer install
 # DATABASE_URL на localhost:3306 при поднятом только mysql-сервисе
 ```
 
-Фронт: Node 22+, `cd frontend && npm install && npm start` (proxy `/api` → `http://localhost:8080`).
+Фронт: Node 22+, `cd frontend && npm install && npm start` (proxy `/api` → `http://nginx:80`, то есть прокси рассчитан на сеть Docker Compose).

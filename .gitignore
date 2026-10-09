@@ -6,4 +6,5 @@
 /frontend/.angular/
 /.idea/
 /.vscode/
+/.cursor/
 *.log
