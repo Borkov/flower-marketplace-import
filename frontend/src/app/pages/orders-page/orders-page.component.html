@@ -66,7 +66,7 @@
           <li class="order-card">
             <div class="result-head">
               <strong>{{ order.marketplace_id }}</strong>
-              <span class="badge badge-status">{{ order.status }}</span>
+              <span class="badge badge-status">{{ statusLabel[order.status] ?? order.status }}</span>
             </div>
             <p>{{ order.customer_name }} · {{ order.customer_phone }}</p>
             <p>
@@ -74,7 +74,20 @@
               @if (order.district) {
                 · {{ order.district }}
               }
+              @if (order.address) {
+                · {{ order.address }}
+              }
             </p>
+            @if (order.items.length > 0) {
+              <ul class="item-list">
+                @for (item of order.items; track $index) {
+                  <li>
+                    <span>{{ item.name }}</span>
+                    <span class="muted">{{ item.qty }} × {{ item.price }} ₽</span>
+                  </li>
+                }
+              </ul>
+            }
             <dl class="totals">
               <div>
                 <dt>Позиции</dt>
@@ -90,7 +103,10 @@
               </div>
             </dl>
             @if (order.needs_review) {
-              <p class="review">Нужна проверка: сумма позиций {{ order.items_sum }} ₽ ≠ total {{ order.marketplace_total }} ₽</p>
+              <p class="review">
+                Суммы не сходятся: в заказе {{ order.items_sum }} ₽, а маркетплейс прислал total
+                {{ order.marketplace_total }} ₽. Доставку считали от суммы заказа. Стоит проверить вручную.
+              </p>
             }
           </li>
         }

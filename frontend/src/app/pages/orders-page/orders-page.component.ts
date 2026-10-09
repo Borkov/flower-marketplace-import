@@ -11,12 +11,20 @@ const DEMO_SHOP_ID = 1;
 
 const STATUS_FILTERS = [
   { value: '', label: 'Все' },
-  { value: 'new', label: 'new' },
-  { value: 'accepted', label: 'accepted' },
-  { value: 'delivering', label: 'delivering' },
-  { value: 'delivered', label: 'delivered' },
-  { value: 'cancelled', label: 'cancelled' },
+  { value: 'new', label: 'Новые' },
+  { value: 'accepted', label: 'Принятые' },
+  { value: 'delivering', label: 'В доставке' },
+  { value: 'delivered', label: 'Доставленные' },
+  { value: 'cancelled', label: 'Отменённые' },
 ] as const;
+
+const STATUS_LABEL: Record<ShopOrder['status'], string> = {
+  new: 'Новый',
+  accepted: 'Принят',
+  delivering: 'В доставке',
+  delivered: 'Доставлен',
+  cancelled: 'Отменён',
+};
 
 const OUTCOME_LABEL: Record<string, string> = {
   created: 'Создан',
@@ -39,6 +47,7 @@ export class OrdersPageComponent implements OnInit {
   readonly shopId = DEMO_SHOP_ID;
   readonly statusFilters = STATUS_FILTERS;
   readonly outcomeLabel = OUTCOME_LABEL;
+  readonly statusLabel = STATUS_LABEL;
 
   readonly importing = signal(false);
   readonly loadingList = signal(false);

@@ -21,6 +21,13 @@ export type ImportResponse = {
   summary: Record<ImportOutcome, number>;
 };
 
+export type ShopOrderItem = {
+  sku: string;
+  name: string;
+  qty: number;
+  price: string;
+};
+
 export type ShopOrder = {
   id: number;
   marketplace_id: string;
@@ -35,6 +42,7 @@ export type ShopOrder = {
   grand_total: string;
   marketplace_total: string;
   needs_review: boolean;
+  items: ShopOrderItem[];
 };
 
 export type OrderListResponse = {

@@ -57,6 +57,16 @@ final class OrderLister
         $items = [];
         /** @var ShopOrder $order */
         foreach ($orders as $order) {
+            $lines = [];
+            foreach ($order->getItems() as $item) {
+                $lines[] = [
+                    'sku' => $item->getSku(),
+                    'name' => $item->getName(),
+                    'qty' => $item->getQty(),
+                    'price' => $item->getPrice(),
+                ];
+            }
+
             $items[] = [
                 'id' => $order->getId(),
                 'marketplace_id' => $order->getMarketplaceId(),
@@ -71,6 +81,7 @@ final class OrderLister
                 'grand_total' => $order->getGrandTotal(),
                 'marketplace_total' => $order->getMarketplaceTotal(),
                 'needs_review' => $order->needsReview(),
+                'items' => $lines,
             ];
         }
 
