@@ -93,6 +93,8 @@ export class OrdersPageComponent implements OnInit {
       status_updated: 'Обновлён только статус',
       missing_items: 'Нет позиций',
       missing_delivery_fields: 'Нет данных доставки',
+      field_too_long: 'Слишком длинное поле',
+      persist_failed: 'Не удалось сохранить заказ',
     };
     return map[line.reason] ?? line.reason;
   }
@@ -106,6 +108,9 @@ export class OrdersPageComponent implements OnInit {
         this.loadingList.set(false);
       },
       error: () => {
+        // Without this the list silently reads as "no orders yet".
+        this.orders.set([]);
+        this.error.set('Не удалось загрузить список заказов. Проверьте, что API запущен.');
         this.loadingList.set(false);
       },
     });
