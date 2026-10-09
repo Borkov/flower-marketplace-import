@@ -44,65 +44,27 @@ final class OrderImporter
             $seen = [];
             $results = [];
 
-            foreach ($rawOrders as $raw) {
-                $parsed = $this->parser->parse($raw);
-                $id = $parsed->marketplaceId;
-                $existing = $id === ''
-                    ? null
-                    : $this->em->getRepository(ShopOrder::class)->findOneBy([
-                        'shop' => $shop,
-                        'marketplaceId' => $id,
-                    ]);
+            foreach ($rawOrders as $index => $raw) {
+                // Savepoint per order: one bad order must not abort the whole batch (assignment rule 2).
+                $savepoint = 'order_' . $index;
+                $this->em->getConnection()->createSavepoint($savepoint);
 
-                $decision = $this->decisions->decide(
-                    seenInBatch: isset($seen[$id]) && $id !== '',
-                    existingStatus: $existing?->getStatus(),
-                    parsed: $parsed,
-                );
-
-                if ($id !== '') {
-                    $seen[$id] = true;
-                }
-
-                if ($decision->outcome === ImportOutcome::Created && $parsed->order !== null) {
-                    $delivery = $calculator->calculate(
-                        $parsed->order->deliveryType,
-                        $parsed->order->district,
-                        $parsed->order->itemsSum,
-                        $parsed->order->createdAt,
-                        $parsed->order->deliveryDate,
-                        $parsed->order->timeFrom,
+                try {
+                    $this->importOne($raw, $shop, $calculator, $seen, $results);
+                    $this->em->getConnection()->releaseSavepoint($savepoint);
+                } catch (\Throwable $e) {
+                    $this->em->getConnection()->rollbackSavepoint($savepoint);
+                    // Drop half-managed state so the failed row cannot poison the next flush().
+                    $this->em->clear();
+                    // The shop row is still locked by this transaction; re-attach it.
+                    $shop = $this->em->find(Shop::class, $shopId, LockMode::PESSIMISTIC_WRITE);
+                    $results[] = new ImportLineResult(
+                        $this->peekMarketplaceId($raw),
+                        ImportOutcome::Rejected,
+                        'persist_failed',
+                        null,
                     );
-                    if (isset($delivery['error'])) {
-                        $results[] = new ImportLineResult(
-                            $id,
-                            ImportOutcome::Rejected,
-                            (string) $delivery['error'],
-                            null,
-                        );
-                        continue;
-                    }
-
-                    $order = $this->persistNew($shop, $parsed->order, $delivery['fee']->toDecimalString());
-                    $this->em->persist($order);
-                    $this->em->flush();
-                    $results[] = new ImportLineResult($id, ImportOutcome::Created, 'created', $order->getId());
-                    continue;
                 }
-
-                if ($decision->outcome === ImportOutcome::Updated && $existing !== null && $decision->newStatus !== null) {
-                    $existing->setStatus($decision->newStatus);
-                    $this->em->flush();
-                    $results[] = new ImportLineResult($id, ImportOutcome::Updated, $decision->reason, $existing->getId());
-                    continue;
-                }
-
-                $results[] = new ImportLineResult(
-                    $id,
-                    $decision->outcome,
-                    $decision->reason,
-                    $existing?->getId(),
-                );
             }
 
             $this->em->commit();
@@ -128,6 +90,95 @@ final class OrderImporter
             'results' => $payload,
             'summary' => $summary,
         ];
+    }
+
+    /**
+     * Handles one raw order line and appends its ImportLineResult.
+     *
+     * @param array<string, true> $seen
+     * @param list<ImportLineResult> $results
+     */
+    private function importOne(
+        mixed $raw,
+        Shop $shop,
+        DeliveryCalculator $calculator,
+        array &$seen,
+        array &$results,
+    ): void {
+        $parsed = $this->parser->parse($raw);
+        $id = $parsed->marketplaceId;
+        $existing = $id === ''
+            ? null
+            : $this->em->getRepository(ShopOrder::class)->findOneBy([
+                'shop' => $shop,
+                'marketplaceId' => $id,
+            ]);
+
+        $decision = $this->decisions->decide(
+            seenInBatch: isset($seen[$id]) && $id !== '',
+            existingStatus: $existing?->getStatus(),
+            parsed: $parsed,
+        );
+
+        if ($id !== '') {
+            $seen[$id] = true;
+        }
+
+        if ($decision->outcome === ImportOutcome::Created && $parsed->order !== null) {
+            $delivery = $calculator->calculate(
+                $parsed->order->deliveryType,
+                $parsed->order->district,
+                $parsed->order->itemsSum,
+                $parsed->order->createdAt,
+                $parsed->order->deliveryDate,
+                $parsed->order->timeFrom,
+            );
+            if (isset($delivery['error'])) {
+                $results[] = new ImportLineResult(
+                    $id,
+                    ImportOutcome::Rejected,
+                    (string) $delivery['error'],
+                    null,
+                );
+
+                return;
+            }
+
+            $order = $this->persistNew($shop, $parsed->order, $delivery['fee']->toDecimalString());
+            $this->em->persist($order);
+            $this->em->flush();
+            $results[] = new ImportLineResult($id, ImportOutcome::Created, 'created', $order->getId());
+
+            return;
+        }
+
+        if ($decision->outcome === ImportOutcome::Updated && $existing !== null && $decision->newStatus !== null) {
+            $existing->setStatus($decision->newStatus);
+            $this->em->flush();
+            $results[] = new ImportLineResult($id, ImportOutcome::Updated, $decision->reason, $existing->getId());
+
+            return;
+        }
+
+        $results[] = new ImportLineResult(
+            $id,
+            $decision->outcome,
+            $decision->reason,
+            $existing?->getId(),
+        );
+    }
+
+    /**
+     * Best-effort id for a line that blew up before/while persisting, so the
+     * reject line in the response is still traceable to the marketplace order.
+     */
+    private function peekMarketplaceId(mixed $raw): string
+    {
+        if (is_array($raw) && isset($raw['id']) && is_scalar($raw['id'])) {
+            return trim((string) $raw['id']);
+        }
+
+        return '';
     }
 
     private function persistNew(Shop $shop, ParsedMarketplaceOrder $parsed, string $deliveryFee): ShopOrder

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Exception\InvalidStatusFilterException;
 use App\Exception\ShopNotFoundException;
 use App\Service\OrderImporter;
 use App\Service\OrderLister;
@@ -58,6 +59,8 @@ final class OrderController extends AbstractController
             ));
         } catch (ShopNotFoundException) {
             return $this->json(['error' => 'shop_not_found'], Response::HTTP_NOT_FOUND);
+        } catch (InvalidStatusFilterException $e) {
+            return $this->json(['error' => 'unknown_status_filter', 'status' => $e->status], Response::HTTP_BAD_REQUEST);
         }
     }
 }

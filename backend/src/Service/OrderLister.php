@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Entity\Shop;
 use App\Entity\ShopOrder;
 use App\Enum\OrderStatus;
+use App\Exception\InvalidStatusFilterException;
 use App\Exception\ShopNotFoundException;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -37,9 +38,11 @@ final class OrderLister
 
         if ($status !== null && $status !== '') {
             $enum = OrderStatus::tryFrom($status);
-            if ($enum !== null) {
-                $qb->andWhere('o.status = :status')->setParameter('status', $enum);
+            if ($enum === null) {
+                // Silent fallback to "all orders" would look like a broken filter in the UI.
+                throw new InvalidStatusFilterException($status);
             }
+            $qb->andWhere('o.status = :status')->setParameter('status', $enum);
         }
 
         $countQb = clone $qb;

@@ -12,6 +12,15 @@ use DateTimeImmutable;
 
 final class MarketplaceOrderParser
 {
+    /** Column limits from the shop_order / shop_order_item schema. */
+    private const MAX_ID = 64;
+    private const MAX_NAME = 255;
+    private const MAX_PHONE = 16;
+    private const MAX_DISTRICT = 32;
+    private const MAX_ADDRESS = 512;
+    private const MAX_SKU = 64;
+    private const MAX_ITEM_NAME = 255;
+
     public function __construct(
         private readonly PhoneNormalizer $phones,
         private readonly StatusMapper $statuses,
@@ -27,6 +36,10 @@ final class MarketplaceOrderParser
         $id = isset($raw['id']) && is_scalar($raw['id']) ? trim((string) $raw['id']) : '';
         if ($id === '') {
             return ParseResult::reject('', 'missing_id', 'Нет идентификатора заказа');
+        }
+
+        if (mb_strlen($id) > self::MAX_ID) {
+            return ParseResult::reject($id, 'field_too_long', 'Идентификатор заказа длиннее ' . self::MAX_ID . ' символов');
         }
 
         $statusRaw = isset($raw['status']) && is_scalar($raw['status']) ? (string) $raw['status'] : '';
@@ -48,10 +61,18 @@ final class MarketplaceOrderParser
             return ParseResult::reject($id, 'missing_customer_name', 'Нет имени покупателя');
         }
 
+        if (mb_strlen($name) > self::MAX_NAME) {
+            return ParseResult::reject($id, 'field_too_long', 'Имя покупателя длиннее ' . self::MAX_NAME . ' символов');
+        }
+
         $phoneRaw = isset($customer['phone']) && is_scalar($customer['phone']) ? (string) $customer['phone'] : '';
         $phone = $this->phones->normalize($phoneRaw);
         if ($phone === null) {
             return ParseResult::reject($id, 'invalid_phone', 'Телефон нельзя привести к +7XXXXXXXXXX');
+        }
+
+        if (mb_strlen($phone) > self::MAX_PHONE) {
+            return ParseResult::reject($id, 'field_too_long', 'Телефон длиннее ' . self::MAX_PHONE . ' символов');
         }
 
         $itemsRaw = $raw['items'] ?? null;
@@ -71,6 +92,19 @@ final class MarketplaceOrderParser
             if ($sku === '' || $itemName === '' || $qty < 1 || !isset($itemRaw['price']) || !is_numeric($itemRaw['price'])) {
                 return ParseResult::reject($id, 'invalid_item', 'Позиция без sku/name/qty/price');
             }
+
+            if (mb_strlen($sku) > self::MAX_SKU) {
+                return ParseResult::reject($id, 'field_too_long', 'SKU длиннее ' . self::MAX_SKU . ' символов');
+            }
+
+            if (mb_strlen($itemName) > self::MAX_ITEM_NAME) {
+                return ParseResult::reject($id, 'field_too_long', 'Название позиции длиннее ' . self::MAX_ITEM_NAME . ' символов');
+            }
+
+            $price = Money::fromRubles($itemRaw['price']);
+            if ($price->kopecks < 0) {
+                return ParseResult::reject($id, 'invalid_item', 'Цена позиции отрицательная');
+            }
             $price = Money::fromRubles($itemRaw['price']);
             $line = Money::fromKopecks($price->kopecks * $qty);
             $itemsSum = $itemsSum->add($line);
@@ -88,6 +122,11 @@ final class MarketplaceOrderParser
         if ($marketplaceTotal === null) {
             return ParseResult::reject($id, 'missing_total', 'Нет суммы заказа');
         }
+
+        if ($marketplaceTotal->kopecks < 0) {
+            return ParseResult::reject($id, 'invalid_total', 'Сумма заказа отрицательная');
+        }
+
         $needsReview = $marketplaceTotal->kopecks !== $itemsSum->kopecks;
 
         $delivery = is_array($raw['delivery'] ?? null) ? $raw['delivery'] : [];
@@ -111,6 +150,14 @@ final class MarketplaceOrderParser
             $timeTo = isset($delivery['time_to']) && is_scalar($delivery['time_to']) ? trim((string) $delivery['time_to']) : '';
             if ($district === '' || $address === '' || $date === '' || $timeFrom === '' || $timeTo === '') {
                 return ParseResult::reject($id, 'missing_delivery_fields', 'Для доставки нужны район, адрес и интервал');
+            }
+
+            if (mb_strlen($district) > self::MAX_DISTRICT) {
+                return ParseResult::reject($id, 'field_too_long', 'Код района длиннее ' . self::MAX_DISTRICT . ' символов');
+            }
+
+            if (mb_strlen($address) > self::MAX_ADDRESS) {
+                return ParseResult::reject($id, 'field_too_long', 'Адрес длиннее ' . self::MAX_ADDRESS . ' символов');
             }
         }
 
