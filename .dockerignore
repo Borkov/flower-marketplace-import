@@ -1,0 +1,10 @@
+.git
+.idea
+.vscode
+.cursor
+backend/var
+backend/vendor
+frontend/node_modules
+frontend/dist
+frontend/.angular
+*.log
