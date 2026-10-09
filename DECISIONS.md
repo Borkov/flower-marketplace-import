@@ -1,7 +1,7 @@
 # DECISIONS.md — журнал решений
 
 > Тестовое задание: Senior Fullstack (Growth). Репозиторий: `flower-marketplace-import`.  
-> Документ живой: дополняем по мере реализации. Сейчас зафиксированы **scaffold + план + допущения по фикстуре**.
+> Документ живой: дополняем по мере реализации. Зафиксированы scaffold, домен, API, UI и решения по производительности.
 
 ---
 
@@ -16,7 +16,7 @@ docker compose up --build
 - UI: http://localhost:4200  
 - API health: http://localhost:8080/api/health  
 
-**Примечание:** на первом `up` контейнер `php` выполняет `composer install`; `frontend` — `npm install`. Нужен запущенный Docker Desktop.
+**Примечание:** `composer install` выполняется на этапе сборки образа `php-fpm` — код и `vendor` лежат внутри образа (см. §2.8); `frontend` при первом `up` делает `npm install`. Нужен запущенный Docker Desktop.
 
 ---
 
@@ -187,6 +187,17 @@ GET  /api/shops/{shopId}/orders?status=new&page=1&limit=20
 - **rejected** `invalid_phone`.
 
 #### MP-1008
+### 2.8. Производительность Docker на Windows
+
+| Решение | Альтернативы | Почему так |
+|---------|--------------|------------|
+| Код и `vendor` лежат **внутри образа** `php-fpm` (`COPY backend /app`, `composer install` на этапе сборки), без bind-mount | Монтировать `./backend:/app` и `./backend/vendor:/app/vendor` для горячей правки PHP | На Windows Docker Desktop каждый `stat`/`read` через mount уходит в хост-ФС: бут Symfony ~3.9 с, `GET /orders` ~6 с. Внутри образа — нативный overlayfs: те же запросы ~40 мс. Правки PHP требуют `docker compose up -d --build php-fpm` (~30–60 с) |
+| OPcache + `realpath_cache` включены в образе (`revalidate_freq=0`, `validate_timestamps=1`) | Без opcache; `validate_timestamps=0` | Кэш bytecode без перечитывания диска на каждом запросе; `=1` оставляем на случай ручных правок внутри контейнера |
+| nginx → `php-fpm:9000` по имени сервиса | `php:9000`, `host.docker.internal` | Имя сервиса резолвит Docker DNS; после пересоздания `php-fpm` нужен `docker compose restart nginx` — nginx кэширует DNS при старте |
+
+**Замеры (до → после):** `GET /api/shops/{id}/orders` ~6000 мс → **40 мс**; `GET /api/health` 2400 мс → **26 мс**; тёплый бут Symfony (CLI) 3924 мс. Причина была не в MySQL и не в запросах Doctrine: `/api/health` вообще не ходит в БД, но отвечал 2.4 с — тормозило чтение файлов кода через mount.
+
+
 
 - status `PACKING` не в маппинге.
 - **rejected** `unknown_status`.
@@ -236,6 +247,8 @@ GET  /api/shops/{shopId}/orders?status=new&page=1&limit=20
 | Unit-тесты | 26 тестов: правила фикстуры построчно, срочность, `needs_review`, дубль в пачке, решения по статусам | коммит 2 |
 | UI | Список карточками, фильтр по статусу, результат импорта, mobile-first | коммит 2 |
 | Правки после проверки API вручную | Per-order savepoint, валидация длин/знаков в парсере, 400 на неизвестный фильтр, ошибка загрузки списка в UI | эта правка |
+| Перф-фикс Docker на Windows | Код и vendor внутрь образа php-fpm, opcache, убраны bind-mount (§2.8): orders ~6 с → 40 мс | коммит `0f58a10` |
+| UI: позиции и адрес в карточке | `items` в `OrderLister`, русские метки статусов, адрес доставки в карточке | коммит `68ef894` |
 
 **На что ушло больше, чем ожидалось:** согласование «не пересчитывать доставку при update» с кодом импорта и ручной прогон фикстуры через API — по summary легко проверить исходный импорт, а расхождения видны только если строить заказ построчно.
 
@@ -273,7 +286,7 @@ GET  /api/shops/{shopId}/orders?status=new&page=1&limit=20
 - [x] Per-order savepoint: одна строка, упавшая на уровне БД, не откатывает пачку (§2.7)
 - [x] Валидация длин и знаков сумм в парсере против ширины колонок
 - [x] `400 unknown_status_filter` вместо молчаливого возврата всех заказов
+- [x] Позиции заказа (`items`) в `GET /orders` и карточке UI, адрес доставки в карточке
+- [x] Перф Docker: код и vendor внутри образа php-fpm, opcache — `orders` 6 с → 40 мс (§2.8)
 
 Параллельные импорты сериализуются `SELECT ... FOR UPDATE` по строке магазина: второй запрос ждёт и видит уже сохранённые заказы (`unchanged` / `updated`). Дубли дополнительно отсекаются UNIQUE-ключом.
-
-Параллельные импорты сериализуются `SELECT ... FOR UPDATE` по строке магазина: второй запрос ждёт и видит уже сохранённые заказы (`unchanged` / `updated`).
