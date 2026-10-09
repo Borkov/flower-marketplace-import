@@ -241,10 +241,12 @@ GET  /api/shops/{shopId}/orders?status=new&page=1&limit=20
 
 ---
 
-## 8. Следующие шаги разработки (чеклист)
+## 8. Что сделано в коде
 
-- [ ] Entities: Order, OrderItem, миграции + UNIQUE (shop_id, marketplace_id)
-- [ ] Services: PhoneNormalizer, StatusMapper, DeliveryCalculator, OrderImporter
-- [ ] POST import + GET list
-- [ ] Angular: типы ответа, список заказов, фильтр статуса
-- [ ] PHPUnit на MP-1002 (срочность), MP-1009 (review), duplicate MP-1001
+- [x] Entities + UNIQUE `(shop_id, marketplace_id)`
+- [x] PhoneNormalizer, StatusMapper, DeliveryCalculator, OrderImporter
+- [x] `POST /api/shops/{id}/orders/import` и `GET /api/shops/{id}/orders`
+- [x] Angular: результат импорта, список, фильтр статуса
+- [x] PHPUnit: MP-1002 срочность, MP-1009 review, дубль MP-1001
+
+Параллельные импорты сериализуются `SELECT ... FOR UPDATE` по строке магазина: второй запрос ждёт и видит уже сохранённые заказы (`unchanged` / `updated`).

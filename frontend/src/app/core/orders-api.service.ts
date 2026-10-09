@@ -7,17 +7,54 @@ export type ImportPayload = {
   orders: unknown[];
 };
 
+export type ImportOutcome = 'created' | 'updated' | 'unchanged' | 'duplicate' | 'rejected';
+
+export type ImportLine = {
+  marketplace_id: string;
+  outcome: ImportOutcome;
+  reason: string;
+  order_id: number | null;
+};
+
+export type ImportResponse = {
+  results: ImportLine[];
+  summary: Record<ImportOutcome, number>;
+};
+
+export type ShopOrder = {
+  id: number;
+  marketplace_id: string;
+  status: string;
+  customer_name: string;
+  customer_phone: string;
+  delivery_type: string;
+  district: string | null;
+  address: string | null;
+  items_sum: string;
+  delivery_fee: string;
+  grand_total: string;
+  marketplace_total: string;
+  needs_review: boolean;
+};
+
+export type OrderListResponse = {
+  items: ShopOrder[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
 @Injectable({ providedIn: 'root' })
 export class OrdersApiService {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
 
-  importOrders(shopId: number, payload: ImportPayload): Observable<unknown> {
-    return this.http.post(`${this.base}/api/shops/${shopId}/orders/import`, payload);
+  importOrders(shopId: number, payload: ImportPayload): Observable<ImportResponse> {
+    return this.http.post<ImportResponse>(`${this.base}/api/shops/${shopId}/orders/import`, payload);
   }
 
-  listOrders(shopId: number, status?: string): Observable<unknown> {
+  listOrders(shopId: number, status?: string): Observable<OrderListResponse> {
     const params = status ? { status } : undefined;
-    return this.http.get(`${this.base}/api/shops/${shopId}/orders`, { params });
+    return this.http.get<OrderListResponse>(`${this.base}/api/shops/${shopId}/orders`, { params });
   }
 }

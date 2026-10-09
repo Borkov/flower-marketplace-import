@@ -2,7 +2,7 @@
 -- Default shop and delivery tariffs (business rules from assignment).
 
 CREATE TABLE IF NOT EXISTS shop (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL
 );
 

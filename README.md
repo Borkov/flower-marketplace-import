@@ -36,14 +36,17 @@ docker/           nginx, php entrypoint, MySQL seed тарифов
 DECISIONS.md      журнал решений (главный артеfact для review)
 ```
 
-## Текущий статус scaffold
+## Тесты
 
-- [x] Docker Compose (mysql, php-fpm, nginx, frontend dev server)
-- [x] Seed тарифов доставки и demo shop в MySQL init
-- [x] Фикстура `frontend/src/assets/marketplace-orders.json`
-- [x] Кнопка «Загрузить заказы» (шлёт фикстуру на import API)
-- [ ] Домен импорта, сущности заказов, расчёт доставки
-- [ ] Список заказов и фильтр по статусу
+```bash
+docker compose exec php vendor/bin/phpunit
+```
+
+## Что уже работает
+
+- [x] Docker Compose (mysql, php-fpm, nginx, frontend)
+- [x] Импорт фикстуры, расчёт доставки, список заказов и фильтр по статусу
+- [x] Unit-тесты правил фикстуры (телефон, статусы, доставка, дубль в пачке)
 
 ## Разработка без Docker (опционально)
 

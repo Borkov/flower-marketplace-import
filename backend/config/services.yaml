@@ -9,4 +9,11 @@ services:
         resource: '../src/'
         exclude:
             - '../src/Entity/'
+            - '../src/Enum/'
+            - '../src/Domain/'
+            - '../src/Exception/'
             - '../src/Kernel.php'
+            - '../src/Import/ParsedMarketplaceOrder.php'
+            - '../src/Import/ParseResult.php'
+            - '../src/Import/ImportDecision.php'
+            - '../src/Import/ImportLineResult.php'

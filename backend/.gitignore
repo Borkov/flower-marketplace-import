@@ -5,3 +5,4 @@
 /public/bundles/
 /var/
 /vendor/
+/.phpunit.result.cache

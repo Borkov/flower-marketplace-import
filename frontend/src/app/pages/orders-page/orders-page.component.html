@@ -1,17 +1,17 @@
 <main class="page">
   <header class="header">
     <h1>Заказы</h1>
-    <p class="subtitle">Демо-магазин #{{ 1 }}</p>
+    <p class="subtitle">Демо-магазин #{{ shopId }}</p>
   </header>
 
   <section class="actions">
     <button
       type="button"
       class="btn-primary"
-      [disabled]="loading()"
+      [disabled]="importing()"
       (click)="loadFixtureAndImport()"
     >
-      {{ loading() ? 'Загрузка…' : 'Загрузить заказы' }}
+      {{ importing() ? 'Загрузка…' : 'Загрузить заказы' }}
     </button>
   </section>
 
@@ -19,15 +19,82 @@
     <p class="alert" role="alert">{{ error() }}</p>
   }
 
-  @if (importResult()) {
+  @if (importResult(); as result) {
     <section class="card">
       <h2>Результат импорта</h2>
-      <pre>{{ importResult() | json }}</pre>
+      <p class="summary">
+        создано {{ result.summary.created }}, обновлено {{ result.summary.updated }}, без изменений
+        {{ result.summary.unchanged }}, дублей {{ result.summary.duplicate }}, отклонено
+        {{ result.summary.rejected }}
+      </p>
+      <ul class="result-list">
+        @for (line of result.results; track $index) {
+          <li class="result-item" [attr.data-outcome]="line.outcome">
+            <div class="result-head">
+              <strong>{{ line.marketplace_id || 'без id' }}</strong>
+              <span class="badge">{{ outcomeLabel[line.outcome] }}</span>
+            </div>
+            <p>{{ reasonText(line) }}</p>
+          </li>
+        }
+      </ul>
     </section>
   }
 
-  <section class="card placeholder">
+  <section class="card">
     <h2>Список заказов</h2>
-    <p>Фильтр по статусу и карточки заказов — следующий этап.</p>
+    <div class="filters" role="tablist">
+      @for (filter of statusFilters; track filter.value) {
+        <button
+          type="button"
+          class="chip"
+          [class.chip-active]="statusFilter() === filter.value"
+          (click)="setFilter(filter.value)"
+        >
+          {{ filter.label }}
+        </button>
+      }
+    </div>
+
+    @if (loadingList()) {
+      <p class="muted">Загрузка списка…</p>
+    } @else if (orders().length === 0) {
+      <p class="muted">Пока нет заказов. Нажмите «Загрузить заказы».</p>
+    } @else {
+      <ul class="order-list">
+        @for (order of orders(); track order.id) {
+          <li class="order-card">
+            <div class="result-head">
+              <strong>{{ order.marketplace_id }}</strong>
+              <span class="badge badge-status">{{ order.status }}</span>
+            </div>
+            <p>{{ order.customer_name }} · {{ order.customer_phone }}</p>
+            <p>
+              {{ order.delivery_type === 'pickup' ? 'Самовывоз' : 'Доставка' }}
+              @if (order.district) {
+                · {{ order.district }}
+              }
+            </p>
+            <dl class="totals">
+              <div>
+                <dt>Позиции</dt>
+                <dd>{{ order.items_sum }} ₽</dd>
+              </div>
+              <div>
+                <dt>Доставка</dt>
+                <dd>{{ order.delivery_fee }} ₽</dd>
+              </div>
+              <div>
+                <dt>Итого</dt>
+                <dd>{{ order.grand_total }} ₽</dd>
+              </div>
+            </dl>
+            @if (order.needs_review) {
+              <p class="review">Нужна проверка: сумма позиций {{ order.items_sum }} ₽ ≠ total {{ order.marketplace_total }} ₽</p>
+            }
+          </li>
+        }
+      </ul>
+    }
   </section>
 </main>
