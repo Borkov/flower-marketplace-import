@@ -113,6 +113,16 @@ GET  /api/shops/{shopId}/orders?status=new&page=1&limit=20
 
 Проверено вручную: пачка `[адрес 600 символов, валидный заказ]` до фикса возвращала 500 и не сохраняла ничего, после фикса — 200, `field_too_long` + валидный заказ сохранён.
 
+### 2.8. Производительность Docker на Windows
+
+| Решение | Альтернативы | Почему так |
+|---------|--------------|------------|
+| Код и `vendor` лежат **внутри образа** `php-fpm` (`COPY backend /app`, `composer install` на этапе сборке), без bind-mount | Монтировать `./backend:/app` и `./backend/vendor:/app/vendor` для горячей правки PHP | На Windows Docker Desktop каждый `stat`/`read` через mount уходит в хост-ФС: бут Symfony ~3.9 с, `GET /orders` ~6 с. Внутри образа — нативный overlayfs: те же запросы ~40 мс. Правки PHP требуют `docker compose up -d --build php-fpm` (~30–60 с) |
+| OPcache + `realpath_cache` включены в образе (`revalidate_freq=0`, `validate_timestamps=1`) | Без opcache; `validate_timestamps=0` | Кэш bytecode без перечитывания диска на каждом запросе; `=1` оставляем на случай ручных правок внутри контейнера |
+| nginx → `php-fpm:9000` по имени сервиса | `php:9000`, `host.docker.internal` | Имя сервиса резолвит Docker DNS; после пересоздания `php-fpm` нужен `docker compose restart nginx` — nginx кэширует DNS при старте |
+
+**Замеры (до → после):** `GET /api/shops/{id}/orders` ~6000 мс → **40 мс**; `GET /api/health` 2400 мс → **26 мс**; тёплый бут Symfony (CLI) 3924 мс. Причина была не в MySQL и не в запросах Doctrine: `/api/health` вообще не ходит в БД, но отвечал 2.4 с — тормозило чтение файлов кода через mount.
+
 ---
 
 ## 3. Что сознательно не делаем
@@ -187,17 +197,6 @@ GET  /api/shops/{shopId}/orders?status=new&page=1&limit=20
 - **rejected** `invalid_phone`.
 
 #### MP-1008
-### 2.8. Производительность Docker на Windows
-
-| Решение | Альтернативы | Почему так |
-|---------|--------------|------------|
-| Код и `vendor` лежат **внутри образа** `php-fpm` (`COPY backend /app`, `composer install` на этапе сборки), без bind-mount | Монтировать `./backend:/app` и `./backend/vendor:/app/vendor` для горячей правки PHP | На Windows Docker Desktop каждый `stat`/`read` через mount уходит в хост-ФС: бут Symfony ~3.9 с, `GET /orders` ~6 с. Внутри образа — нативный overlayfs: те же запросы ~40 мс. Правки PHP требуют `docker compose up -d --build php-fpm` (~30–60 с) |
-| OPcache + `realpath_cache` включены в образе (`revalidate_freq=0`, `validate_timestamps=1`) | Без opcache; `validate_timestamps=0` | Кэш bytecode без перечитывания диска на каждом запросе; `=1` оставляем на случай ручных правок внутри контейнера |
-| nginx → `php-fpm:9000` по имени сервиса | `php:9000`, `host.docker.internal` | Имя сервиса резолвит Docker DNS; после пересоздания `php-fpm` нужен `docker compose restart nginx` — nginx кэширует DNS при старте |
-
-**Замеры (до → после):** `GET /api/shops/{id}/orders` ~6000 мс → **40 мс**; `GET /api/health` 2400 мс → **26 мс**; тёплый бут Symfony (CLI) 3924 мс. Причина была не в MySQL и не в запросах Doctrine: `/api/health` вообще не ходит в БД, но отвечал 2.4 с — тормозило чтение файлов кода через mount.
-
-
 
 - status `PACKING` не в маппинге.
 - **rejected** `unknown_status`.
@@ -249,6 +248,7 @@ GET  /api/shops/{shopId}/orders?status=new&page=1&limit=20
 | Правки после проверки API вручную | Per-order savepoint, валидация длин/знаков в парсере, 400 на неизвестный фильтр, ошибка загрузки списка в UI | эта правка |
 | Перф-фикс Docker на Windows | Код и vendor внутрь образа php-fpm, opcache, убраны bind-mount (§2.8): orders ~6 с → 40 мс | коммит `0f58a10` |
 | UI: позиции и адрес в карточке | `items` в `OrderLister`, русские метки статусов, адрес доставки в карточке | коммит `68ef894` |
+| UI-полировка и разбор «сборка не работает» | Цветные статусы, блоки карточек, формулировки; диагностика показала, что падал Angular-шаблон (`NG5002`), а не Docker | коммит `fbb0840` |
 
 **На что ушло больше, чем ожидалось:** согласование «не пересчитывать доставку при update» с кодом импорта и ручной прогон фикстуры через API — по summary легко проверить исходный импорт, а расхождения видны только если строить заказ построчно.
 
@@ -265,6 +265,10 @@ GET  /api/shops/{shopId}/orders?status=new&page=1&limit=20
 | UI (далее) | Разметка mobile-first | Реальный viewport / DevTools |
 
 **Переделывали / ожидаем переделки:** nginx `SCRIPT_FILENAME`, line endings в `entrypoint.sh`, согласование «не пересчитывать доставку при update» с кодом импорта.
+
+**Конкретно при доводке UI (AI + правка руками):**
+- AI сгенерировал битый тег `<span>` в `orders-page.component.html` (незакрытая кавычка + дубль атрибутов) — `ng build` падал с `NG5002`, фронтенд-контейнер стартовал, но бандл не собирался. Со стороны это выглядело как «Docker не работает», хотя виноват был шаблон, а не сборка.
+- Первая правка отступа `.review { margin-top }` не дала эффекта: правило `.order-card p` (специфичность `(0,1,1)`) перебивало `.review` `(0,1,0)`. Исправлено селектором `.order-card .review`. AI в первый заход это упустил — поймано только через DevTools по computed-стилю.
 
 ---
 
@@ -288,5 +292,6 @@ GET  /api/shops/{shopId}/orders?status=new&page=1&limit=20
 - [x] `400 unknown_status_filter` вместо молчаливого возврата всех заказов
 - [x] Позиции заказа (`items`) в `GET /orders` и карточке UI, адрес доставки в карточке
 - [x] Перф Docker: код и vendor внутри образа php-fpm, opcache — `orders` 6 с → 40 мс (§2.8)
+- [x] UI-полировка: цветные бейджи статусов, блоки получателя/доставки/позиций, выравнивание по центру, человекочитаемые формулировки предупреждений (коммит `fbb0840`)
 
 Параллельные импорты сериализуются `SELECT ... FOR UPDATE` по строке магазина: второй запрос ждёт и видит уже сохранённые заказы (`unchanged` / `updated`). Дубли дополнительно отсекаются UNIQUE-ключом.
