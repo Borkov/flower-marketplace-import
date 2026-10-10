@@ -67,6 +67,10 @@ final class OrderLister
                 ];
             }
 
+            $marketplaceCreatedAt = $order->getMarketplaceCreatedAt();
+            $marketplaceCreatedAt = $marketplaceCreatedAt
+                ->setTimezone(new \DateTimeZone('Europe/Moscow'));
+
             $items[] = [
                 'id' => $order->getId(),
                 'marketplace_id' => $order->getMarketplaceId(),
@@ -76,11 +80,17 @@ final class OrderLister
                 'delivery_type' => $order->getDeliveryType()->value,
                 'district' => $order->getDistrict(),
                 'address' => $order->getAddress(),
+                'delivery_date' => $order->getDeliveryDate(),
+                'time_from' => $order->getTimeFrom(),
+                'time_to' => $order->getTimeTo(),
+                'is_urgent' => $order->isUrgent(),
+                'urgency_fee' => $order->isUrgent() ? (string) DeliveryCalculator::URGENCY_FEE_RUBLES : null,
                 'items_sum' => $order->getItemsSum(),
                 'delivery_fee' => $order->getDeliveryFee(),
                 'grand_total' => $order->getGrandTotal(),
                 'marketplace_total' => $order->getMarketplaceTotal(),
                 'needs_review' => $order->needsReview(),
+                'marketplace_created_at' => $marketplaceCreatedAt->format('Y-m-d H:i'),
                 'items' => $lines,
             ];
         }

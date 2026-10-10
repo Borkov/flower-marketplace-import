@@ -144,7 +144,7 @@ final class OrderImporter
                 return;
             }
 
-            $order = $this->persistNew($shop, $parsed->order, $delivery['fee']->toDecimalString());
+            $order = $this->persistNew($shop, $parsed->order, $delivery['fee']->toDecimalString(), $delivery['urgent']);
             $this->em->persist($order);
             $this->em->flush();
             $results[] = new ImportLineResult($id, ImportOutcome::Created, 'created', $order->getId());
@@ -181,7 +181,7 @@ final class OrderImporter
         return '';
     }
 
-    private function persistNew(Shop $shop, ParsedMarketplaceOrder $parsed, string $deliveryFee): ShopOrder
+    private function persistNew(Shop $shop, ParsedMarketplaceOrder $parsed, string $deliveryFee, bool $isUrgent): ShopOrder
     {
         $order = new ShopOrder();
         $order->setShop($shop);
@@ -199,6 +199,7 @@ final class OrderImporter
         $order->setMarketplaceTotal($parsed->marketplaceTotal->toDecimalString());
         $order->setItemsSum($parsed->itemsSum->toDecimalString());
         $order->setDeliveryFee($deliveryFee);
+        $order->setIsUrgent($isUrgent);
         $grand = $parsed->itemsSum->add(\App\Domain\Money::fromRubles($deliveryFee));
         $order->setGrandTotal($grand->toDecimalString());
         $order->setNeedsReview($parsed->needsReview);

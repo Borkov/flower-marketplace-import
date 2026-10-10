@@ -55,6 +55,9 @@ class ShopOrder
     #[ORM\Column(length: 5, nullable: true)]
     private ?string $timeTo = null;
 
+    #[ORM\Column(name: 'is_urgent', type: 'boolean')]
+    private bool $isUrgent = false;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private DateTimeImmutable $marketplaceCreatedAt;
 
@@ -205,6 +208,16 @@ class ShopOrder
     public function setTimeTo(?string $timeTo): void
     {
         $this->timeTo = $timeTo;
+    }
+
+    public function isUrgent(): bool
+    {
+        return $this->isUrgent;
+    }
+
+    public function setIsUrgent(bool $isUrgent): void
+    {
+        $this->isUrgent = $isUrgent;
     }
 
     public function getMarketplaceCreatedAt(): DateTimeImmutable

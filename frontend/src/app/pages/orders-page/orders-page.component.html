@@ -66,8 +66,15 @@
           <li class="order-card">
             <div class="result-head">
               <strong>{{ order.marketplace_id }}</strong>
+              @if (order.is_urgent) {
+                <span class="badge badge-urgent">Срочно +{{ order.urgency_fee }} ₽</span>
+              }
               <span class="badge badge-status">{{ statusLabel[order.status] ?? order.status }}</span>
             </div>
+            <p class="meta-line">
+              <span class="meta-label">Дата создания:</span>
+              <span>{{ order.marketplace_created_at ?? '-' }}</span>
+            </p>
             <p>{{ order.customer_name }} · {{ order.customer_phone }}</p>
             <p>
               {{ order.delivery_type === 'pickup' ? 'Самовывоз' : 'Доставка' }}
@@ -78,6 +85,17 @@
                 · {{ order.address }}
               }
             </p>
+            @if (order.delivery_date) {
+              <p class="delivery-slot">
+                📅 {{ order.delivery_date }}
+                @if (order.time_from) {
+                  {{ order.time_from }}
+                }
+                @if (order.time_to) {
+                  – {{ order.time_to }}
+                }
+              </p>
+            }
             @if (order.items.length > 0) {
               <ul class="item-list">
                 @for (item of order.items; track $index) {

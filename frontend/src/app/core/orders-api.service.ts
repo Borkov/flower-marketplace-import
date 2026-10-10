@@ -37,11 +37,17 @@ export type ShopOrder = {
   delivery_type: string;
   district: string | null;
   address: string | null;
+  delivery_date: string | null;
+  time_from: string | null;
+  time_to: string | null;
+  is_urgent: boolean;
+  urgency_fee: string | null;
   items_sum: string;
   delivery_fee: string;
   grand_total: string;
   marketplace_total: string;
   needs_review: boolean;
+  marketplace_created_at: string | null;
   items: ShopOrderItem[];
 };
 
