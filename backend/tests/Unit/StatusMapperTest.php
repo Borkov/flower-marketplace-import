@@ -6,11 +6,12 @@ namespace App\Tests\Unit;
 
 use App\Enum\OrderStatus;
 use App\Service\StatusMapper;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class StatusMapperTest extends TestCase
 {
-    /** @dataProvider known */
+    #[DataProvider('known')]
     public function testMapsKnownStatuses(string $raw, OrderStatus $expected): void
     {
         self::assertSame($expected, (new StatusMapper())->map($raw));

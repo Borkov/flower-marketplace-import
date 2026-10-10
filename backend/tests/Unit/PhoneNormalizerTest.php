@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit;
 
 use App\Service\PhoneNormalizer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class PhoneNormalizerTest extends TestCase
@@ -16,7 +17,7 @@ final class PhoneNormalizerTest extends TestCase
         $this->normalizer = new PhoneNormalizer();
     }
 
-    /** @dataProvider validPhones */
+    #[DataProvider('validPhones')]
     public function testNormalizesToE164(string $raw, string $expected): void
     {
         self::assertSame($expected, $this->normalizer->normalize($raw));
