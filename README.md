@@ -42,6 +42,20 @@ DECISIONS.md      журнал решений (главный артеfact дл�
 docker compose exec php-fpm vendor/bin/phpunit
 ```
 
+## Сброс заказов в БД
+
+Чтобы очистить загруженные заказы и заново прогнать импорт фикстуры (справочники магазина и тарифов при этом сохраняются):
+
+```bash
+docker exec flower-marketplace-import-mysql-1 mysql -uapp -papp flower_shop -e "SET FOREIGN_KEY_CHECKS=0; TRUNCATE shop_order_item; TRUNCATE shop_order; SET FOREIGN_KEY_CHECKS=1;"
+```
+
+Проверить, что очистилось:
+
+```bash
+docker exec flower-marketplace-import-mysql-1 mysql -uapp -papp flower_shop -e "SELECT COUNT(*) AS orders FROM shop_order;"
+```
+
 ## Что уже работает
 
 - [x] Docker Compose (mysql, php-fpm, nginx, frontend)
