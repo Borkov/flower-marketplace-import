@@ -18,7 +18,7 @@ cd flower-marketplace-import
 docker compose up --build
 ```
 
-Первый запуск может занять несколько минут: `composer install` в контейнере `php`, `npm install` в `frontend`.
+Первый запуск может занять несколько минут: `composer install` в контейнере `php-fpm`, `npm install` в `frontend`.
 
 | URL | Назначение |
 |-----|------------|
@@ -30,8 +30,8 @@ docker compose up --build
 ## Структура
 
 ```
-backend/          Symfony 7.2, PHP 8.2
-frontend/         Angular 19 (standalone, signals на следующих этапах)
+backend/          Symfony 7.4, PHP 8.2
+frontend/         Angular 19 (standalone, signals)
 docker/           nginx, php entrypoint, MySQL seed тарифов
 DECISIONS.md      журнал решений (главный артеfact для review)
 ```
@@ -39,7 +39,7 @@ DECISIONS.md      журнал решений (главный артеfact дл�
 ## Тесты
 
 ```bash
-docker compose exec php vendor/bin/phpunit
+docker compose exec php-fpm vendor/bin/phpunit
 ```
 
 ## Что уже работает
