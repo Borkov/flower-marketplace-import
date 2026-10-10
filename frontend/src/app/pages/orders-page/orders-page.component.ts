@@ -97,7 +97,7 @@ export class OrdersPageComponent implements OnInit {
       unknown_district: 'Район без тарифа',
       invalid_phone: 'Телефон нельзя нормализовать',
       unknown_status: 'Неизвестный статус',
-      status_unchanged: 'Статус уже такой',
+      status_unchanged: 'Заказ уже был с таким статусом',
       final_status_locked: 'Финальный статус не откатывается',
       status_updated: 'Обновлён только статус',
       missing_items: 'Нет позиций',

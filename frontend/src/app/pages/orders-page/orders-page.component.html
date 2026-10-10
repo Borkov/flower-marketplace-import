@@ -69,14 +69,23 @@
               @if (order.is_urgent) {
                 <span class="badge badge-urgent">Срочно +{{ order.urgency_fee }} ₽</span>
               }
-              <span class="badge badge-status">{{ statusLabel[order.status] ?? order.status }}</span>
+              <span
+                class="badge badge-status"
+                [class.badge-status-new]="order.status === 'new'"
+                [class.badge-status-accepted]="order.status === 'accepted'"
+                [class.badge-status-delivering]="order.status === 'delivering'"
+                [class.badge-status-delivered]="order.status === 'delivered'"
+                [class.badge-status-cancelled]="order.status === 'cancelled'"
+              >{{ statusLabel[order.status] ?? order.status }}</span>
             </div>
             <p class="meta-line">
-              <span class="meta-label">Дата создания:</span>
-              <span>{{ order.marketplace_created_at ?? '-' }}</span>
+              <span class="meta-label">Создан:</span>
+              <span>{{ order.created ?? '-' }}</span>
             </p>
-            <p>{{ order.customer_name }} · {{ order.customer_phone }}</p>
-            <p>
+                        <div class="recipient">
+              <p>{{ order.customer_name }} · {{ order.customer_phone }}</p>
+            </div>
+            <p class="delivery-line">
               {{ order.delivery_type === 'pickup' ? 'Самовывоз' : 'Доставка' }}
               @if (order.district) {
                 · {{ order.district }}
@@ -99,7 +108,7 @@
             @if (order.items.length > 0) {
               <ul class="item-list">
                 @for (item of order.items; track $index) {
-                  <li>
+                  <li class="item">
                     <span>{{ item.name }}</span>
                     <span class="muted">{{ item.qty }} × {{ item.price }} ₽</span>
                   </li>
@@ -122,8 +131,8 @@
             </dl>
             @if (order.needs_review) {
               <p class="review">
-                Суммы не сходятся: в заказе {{ order.items_sum }} ₽, а маркетплейс прислал total
-                {{ order.marketplace_total }} ₽. Доставку считали от суммы заказа. Стоит проверить вручную.
+                ⚠️ Сумма заказа не совпадает: по товарам {{ order.items_sum }} ₽, а от маркетплейса —
+                {{ order.marketplace_total }} ₽. Итог рассчитан по товарам, проверьте заказ вручную.
               </p>
             }
           </li>

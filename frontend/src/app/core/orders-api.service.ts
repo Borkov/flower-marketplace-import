@@ -47,7 +47,7 @@ export type ShopOrder = {
   grand_total: string;
   marketplace_total: string;
   needs_review: boolean;
-  marketplace_created_at: string | null;
+  created: string | null;
   items: ShopOrderItem[];
 };
 

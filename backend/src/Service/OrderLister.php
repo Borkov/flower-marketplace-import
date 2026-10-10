@@ -90,7 +90,7 @@ final class OrderLister
                 'grand_total' => $order->getGrandTotal(),
                 'marketplace_total' => $order->getMarketplaceTotal(),
                 'needs_review' => $order->needsReview(),
-                'marketplace_created_at' => $marketplaceCreatedAt->format('Y-m-d H:i'),
+                'created' => $marketplaceCreatedAt->format('Y-m-d H:i'),
                 'items' => $lines,
             ];
         }

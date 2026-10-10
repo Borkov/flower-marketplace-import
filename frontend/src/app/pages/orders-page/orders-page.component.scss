@@ -86,7 +86,7 @@
 
 .result-item p,
 .order-card p {
-  margin: 0.35rem 0 0;
+  margin: 0.35rem 0 0.35rem 0;
   font-size: 0.9rem;
 }
 
@@ -157,8 +157,8 @@
   font-weight: 600;
 }
 
-.review {
-  margin-top: 0.6rem;
+.order-card .review {
+  margin-top: 2rem;
   color: #9a6700;
   font-size: 0.85rem;
 }
@@ -183,10 +183,31 @@
   font-size: 0.9rem;
 }
 
-.item-list li {
+.item {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.35rem;
+  background: #f1f5f9;
+}
+
+.item span:first-child {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.item .muted {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.recipient {
+  border-left: 3px solid var(--accent);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0 0.4rem 0.4rem 0;
+  background: #f8fafc;
 }
 
 .badge-urgent {
@@ -194,6 +215,48 @@
   color: var(--danger);
 }
 
+.badge-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: #e8eef2;
+}
+
+.badge-status-new {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-status-accepted {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge-status-delivering {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-status-delivered {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge-status-cancelled {
+  background: #fde8e6;
+  color: var(--danger);
+}
+
 .delivery-slot {
   font-weight: 600;
+}
+
+.delivery-line {
+  background: #eef6f0;
+  border: 1px solid #d6efe2;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.9rem;
+  color: var(--text);
 }
